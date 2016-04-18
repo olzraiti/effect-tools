@@ -1,0 +1,8 @@
+#!/bin/bash
+# Starts a jack-rack with given LADSPA effect if it doesn't exist yet. Available options are in effects/
+#  Example: start_rack delay
+dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+effects_dir=$dir/../effects
+if [[ $(rack_exists $1) == false ]]; then
+	jack-rack $effects_dir/$1 -s $1 &
+fi

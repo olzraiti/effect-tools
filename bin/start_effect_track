@@ -1,0 +1,2 @@
+#!/bin/bash
+urxvtc -name effect_track -e ~/songs/song.sh $1

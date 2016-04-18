@@ -1,0 +1,4 @@
+jack_control stop
+pkill patchage
+pkill jack-rack
+pkill meterbridge

@@ -1,0 +1,42 @@
+#!/bin/bash
+# Allows changing between predefined effect chain tracks by using the arduino switch.
+# Prefedined effect chain tracks are in effect_tracks/
+
+dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+effect_track_dir=$dir/../effects
+
+pedal_output=$(mktemp)
+
+#start arduino switch listener
+$(picocom -b 115200 /dev/ttyUSB0 -c >> $pedal_output) &
+
+function wait_for_key {
+	#Read key input from keyboard (in case you don't have your arduino switch with you)
+	#read -n1 -r  key </dev/tty
+
+	#Read arduino switch press
+	tail -f -n 1 $pedal_output | read line
+}
+
+all_initialized="true"
+cat $effect_track_dir/$1 | while read effect_combo; do
+	for effect in $effect_combo; do
+		if [[ $(rack_exists $effect) != "true" && $effect != "none" ]]; then
+			start_rack $effect
+			all_initialized="false"
+		fi
+	done
+done
+
+if [[ $all_initialized == "false" ]]; then
+	sleep 2
+fi
+
+cat $effect_track_dir/$1 | while read effect; do
+	effect $effect
+	xdotool search effect_track windowactivate
+	echo Effect: $effect
+	wait_for_key
+done
+
+effect none

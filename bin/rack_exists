@@ -1,0 +1,13 @@
+#!/bin/bash
+# Returns true, if given effect is started.
+
+existing_racks=$(ps ax | grep "[j]ack-rack" | awk '{print $8}')
+
+while read line; do
+	if [[ $line == *" "$1" "* || $line == $1" "* || $line == *" "$1 ]]; then
+		echo true
+		exit
+	fi
+done < <(echo $existing_racks)
+
+echo false

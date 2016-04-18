@@ -1,0 +1,90 @@
+#!/bin/bash
+# Changes the current LADSPA effect chain. Available effects are at effects/
+# Example: effect delay vibrato
+
+effects=$1
+
+#TODO UNCOMMENT
+#jack_disconnect system:capture_2 system:playback_2
+
+function get_connected_rack {
+	echo $(jack_lsp -c | grep "  jack_rack" | cut -d ":" -f 1 | uniq | tail -n 1)
+}
+
+while true; do
+	connected_rack=$(get_connected_rack)
+	if [[ -z $connected_rack ]]; then
+		break
+	fi
+
+	input_port=$connected_rack:in_1
+	source=$(jack_lsp -c  | grep ^$input_port -A 1 | tail -n 1)
+	jack_disconnect $source $input_port 1>/dev/null 2>&1
+
+	output_port=$connected_rack:out_1
+	sink=$(jack_lsp -c  | grep ^$output_port -A 1 | tail -n 1)
+	jack_disconnect $output_port $sink 1>/dev/null 2>&1
+	#output_port=$connected_rack:out_1
+	#for i in {2..1}; do
+	#	sink=$(jack_lsp -c  | grep $output_port -A $i | tail -n 1)
+	#	echo "  jack_disconnect $output_port $sink"
+	#	jack_disconnect $output_port $sink
+	#done
+done
+if [[ $effect == none ]]; then
+	jack_connect system:capture_1 system:playback_1 1>/dev/null 2>&1
+	jack_connect system:capture_1 system:playback_2 1>/dev/null 2>&1
+else
+	jack_disconnect system:capture_1 system:playback_1 1>/dev/null 2>&1
+	jack_disconnect system:capture_1 system:playback_2 1>/dev/null 2>&1
+	for effect in "$@"; do
+		if [[ $(rack_exists $effect) == false ]]; then
+			start_rack $effect 1>/dev/null 2>&1
+			sleep 0.5
+		fi
+	done
+	prevEff=""
+	for effect in "$@"; do
+		if [[ -n $prevEff ]]; then
+			jack_connect jack_rack_$prevEff:out_1 jack_rack_$effect:in_1
+		fi
+		prevEff=$effect
+	done
+	jack_connect system:capture_1 jack_rack_$1:in_1 1>/dev/null 2>&1
+	jack_connect jack_rack_$effect:out_1 system:playback_1  1>/dev/null 2>&1
+	jack_connect jack_rack_$effect:out_1 system:playback_2  1>/dev/null 2>&1
+fi
+exit
+
+#older version below (which supports only one effect at a time but is a bit faster)
+
+effect=$1
+
+connected_rack=$(jack_lsp -c | grep "  jack_rack" | tail -n 1 | cut -d ":" -f 1 | cut -d " " -f 4)
+
+if [[ -n $connected_rack ]]; then
+	#echo "disconnecting current"
+	jack_disconnect system:capture_1 $connected_rack":in_1"
+	jack_disconnect $connected_rack":out_1" system:playback_1
+	jack_disconnect $connected_rack":out_1" system:playback_2
+fi
+
+if [[ $effect == none ]]; then
+	jack_connect system:capture_1 system:playback_1
+	jack_connect system:capture_1 system:playback_2
+else
+	jack_disconnect system:capture_1 system:playback_1
+	jack_disconnect system:capture_1 system:playback_2
+
+	existing_rack=$(ps ax | grep "[j]ack-rack" | awk '{print $8}')
+
+	if [[ $(rack_exists $effect) == false ]]; then
+		start_rack $effect
+		sleep 0.5
+	fi
+
+	jack_connect system:capture_1 jack_rack_$effect:in_1
+
+	jack_connect jack_rack_$effect:out_1 system:playback_1 
+	jack_connect jack_rack_$effect:out_1 system:playback_2 
+fi
