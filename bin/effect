@@ -31,7 +31,7 @@ while true; do
 	#	jack_disconnect $output_port $sink
 	#done
 done
-if [[ $effect == none ]]; then
+if [[ $effects == none ]]; then
 	jack_connect system:capture_1 system:playback_1 1>/dev/null 2>&1
 	jack_connect system:capture_1 system:playback_2 1>/dev/null 2>&1
 else

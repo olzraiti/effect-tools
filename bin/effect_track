@@ -3,12 +3,12 @@
 # Prefedined effect chain tracks are in effect_tracks/
 
 dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-effect_track_dir=$dir/../effects
+effect_track_dir=$dir/../effect_tracks
 
 pedal_output=$(mktemp)
 
 #start arduino switch listener
-$(picocom -b 115200 /dev/ttyUSB0 -c >> $pedal_output) &
+$(picocom -b 115200 /dev/ttyUSB0 -c >> $pedal_output) & 2>&1 >/dev/null
 
 function wait_for_key {
 	#Read key input from keyboard (in case you don't have your arduino switch with you)
@@ -22,7 +22,7 @@ all_initialized="true"
 cat $effect_track_dir/$1 | while read effect_combo; do
 	for effect in $effect_combo; do
 		if [[ $(rack_exists $effect) != "true" && $effect != "none" ]]; then
-			start_rack $effect
+			start_rack $effect 2>&1 >/dev/null
 			all_initialized="false"
 		fi
 	done
@@ -33,10 +33,12 @@ if [[ $all_initialized == "false" ]]; then
 fi
 
 cat $effect_track_dir/$1 | while read effect; do
-	effect $effect
-	xdotool search effect_track windowactivate
+	effect $effect 2>&1 >/dev/null
+	#xdotool search effect_track windowactivate 2>&1 >/dev/null
 	echo Effect: $effect
+	notify-send "Effect: $effect"
 	wait_for_key
 done
 
-effect none
+effect none 2>&1 >/dev/null
+
