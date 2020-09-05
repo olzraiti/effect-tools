@@ -36,9 +36,10 @@ cat $effect_track_dir/$1 | while read effect; do
 	effect $effect 2>&1 >/dev/null
 	#xdotool search effect_track windowactivate 2>&1 >/dev/null
 	echo Effect: $effect
-	notify-send "Effect: $effect"
+	notify-send "Effect" "$effect"
 	wait_for_key
 done
 
 effect none 2>&1 >/dev/null
+pkill picocom -9
 
